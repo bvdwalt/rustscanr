@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+
+    - name: Cache cargo
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Run Clippy (linting)
+      run: cargo clippy -- -D warnings
+
+    - name: Check formatting
+      run: cargo fmt -- --check
+
+    - name: Run tests
+      run: cargo test --verbose
+
+  create_tag:
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version =' Cargo.toml | head -n1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Create tag if not exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git ls-remote --exit-code --tags origin "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+            git push origin "v${{ steps.version.outputs.version }}"
+          fi
+
+  release:
+    needs: create_tag
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Fetch all tags
+      run: git fetch --tags --force
+
+    - name: Get latest tag
+      id: get_tag
+      run: |
+        TAG=$(git describe --tags --abbrev=0)
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+    - name: Build release binary
+      run: cargo build --release
+
+    - name: Package binaries
+      if: runner.os == 'Windows'
+      run: powershell Compress-Archive -Path target\release\rustyclip.exe -DestinationPath target\release\rustyclip-windows.zip
+
+    - name: Package binaries (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: tar -czf target/release/rustyclip-${{ runner.os }}.tar.gz -C target/release rustyclip
+
+    - name: Publish to crates.io
+      if: matrix.platform == 'ubuntu-latest'
+      run: |
+        set +e
+        cargo publish --verbose --token ${{ secrets.CARGO_REGISTRY_TOKEN }} 2>&1 | tee publish.log
+        status=${PIPESTATUS[0]}
+        if grep -q 'already exists on crates.io index' publish.log; then
+        echo "Crate already published, skipping failure."
+        exit 0
+        fi
+        exit $status
+
+    - name: Create GitHub Release
+      if: matrix.platform == 'ubuntu-latest'
+      uses: softprops/action-gh-release@v2
+      with:
+        generate_release_notes: true
+        tag_name: ${{ steps.get_tag.outputs.tag }}
+        files: |
+          target/release/rustyclip-linux.tar.gz
+          target/release/rustyclip-macos.tar.gz
+          target/release/rustyclip-windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
