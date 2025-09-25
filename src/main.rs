@@ -6,7 +6,7 @@ use tokio::net::TcpStream;
 use tokio::time::timeout;
 
 #[derive(Parser, Debug)]
-#[command(name = "portscan")]
+#[command(name = "rustscanr")]
 #[command(about = "Simple async port scanner (TCP)")]
 struct Args {
     /// Hostname or IP to scan (e.g. example.com or 192.168.1.10)
