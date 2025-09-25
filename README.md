@@ -1,5 +1,13 @@
 # rustscanr
 
+[![Crates.io](https://img.shields.io/crates/v/rustscanr.svg)](https://crates.io/crates/rustscanr)
+[![Docs.rs](https://docs.rs/rustscanr/badge.svg)](https://docs.rs/rustscanr)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/bvdwalt/rustscanr/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/rustscanr/actions/workflows/ci.yml)
+[![Release](https://github.com/bvdwalt/rustscanr/actions/workflows/release.yml/badge.svg)](https://github.com/bvdwalt/rustscanr/actions/workflows/release.yml)
+
+---
+
 `rustscanr` is a simple async TCP port scanner written in Rust. It is designed to quickly scan port ranges on target hosts, providing fast and efficient network reconnaissance.
 
 ## Features
