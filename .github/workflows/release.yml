@@ -93,11 +93,11 @@ jobs:
 
     - name: Package binaries
       if: runner.os == 'Windows'
-      run: powershell Compress-Archive -Path target\release\rustyclip.exe -DestinationPath target\release\rustyclip-windows.zip
+      run: powershell Compress-Archive -Path target\release\rustscanr.exe -DestinationPath target\release\rustscanr-windows.zip
 
     - name: Package binaries (Linux/macOS)
       if: runner.os != 'Windows'
-      run: tar -czf target/release/rustyclip-${{ runner.os }}.tar.gz -C target/release rustyclip
+      run: tar -czf target/release/rustscanr-${{ runner.os }}.tar.gz -C target/release rustscanr
 
     - name: Publish to crates.io
       if: matrix.platform == 'ubuntu-latest'
@@ -118,8 +118,8 @@ jobs:
         generate_release_notes: true
         tag_name: ${{ steps.get_tag.outputs.tag }}
         files: |
-          target/release/rustyclip-linux.tar.gz
-          target/release/rustyclip-macos.tar.gz
-          target/release/rustyclip-windows.zip
+          target/release/rustscanr-linux.tar.gz
+          target/release/rustscanr-macos.tar.gz
+          target/release/rustscanr-windows.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
